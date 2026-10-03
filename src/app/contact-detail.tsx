@@ -10,31 +10,41 @@ import {
   View,
 } from "react-native";
 
+interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+}
+
 export default function ContactDetail() {
-  const { id, name, phone, address } = useLocalSearchParams();
+  const { id, name, phone, address } = useLocalSearchParams<{
+    id: string;
+    name: string;
+    phone: string;
+    address: string;
+  }>();
 
-  const [editMode, setEditMode] = useState(false);
-  const [editName, setEditName] = useState(String(name || ""));
-  const [editPhone, setEditPhone] = useState(String(phone || ""));
-  const [editAddress, setEditAddress] = useState(
-    String(address || "")
-  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(name || "");
+  const [editPhone, setEditPhone] = useState(phone || "");
+  const [editAddress, setEditAddress] = useState(address || "");
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (): Promise<void> => {
     if (!editName || !editPhone || !editAddress) {
-      Alert.alert(
-        "Data belum lengkap",
-        "Silakan isi semua data kontak."
-      );
+      Alert.alert("Peringatan", "Semua data harus diisi.");
       return;
     }
 
     try {
-      const savedData = await AsyncStorage.getItem("contacts");
-      const contacts = savedData ? JSON.parse(savedData) : [];
+      const savedContacts = await AsyncStorage.getItem("contacts");
 
-      const updatedContacts = contacts.map((contact: any) =>
-        contact.id === String(id)
+      const contacts: Contact[] = savedContacts
+        ? JSON.parse(savedContacts)
+        : [];
+
+      const updatedContacts = contacts.map((contact) =>
+        contact.id === id
           ? {
               ...contact,
               name: editName,
@@ -49,28 +59,20 @@ export default function ContactDetail() {
         JSON.stringify(updatedContacts)
       );
 
-      Alert.alert(
-        "Berhasil",
-        "Kontak berhasil diperbarui.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/"),
-          },
-        ]
-      );
+      Alert.alert("Berhasil", "Kontak berhasil diperbarui.");
+
+      setIsEditing(false);
+      router.replace("/");
     } catch (error) {
-      Alert.alert(
-        "Gagal",
-        "Kontak tidak dapat diperbarui."
-      );
+      console.log("Gagal memperbarui kontak:", error);
+      Alert.alert("Error", "Kontak gagal diperbarui.");
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async (): Promise<void> => {
     Alert.alert(
       "Hapus Kontak",
-      "Apakah kamu yakin ingin menghapus kontak ini?",
+      `Apakah kamu yakin ingin menghapus kontak ${name}?`,
       [
         {
           text: "Batal",
@@ -81,16 +83,15 @@ export default function ContactDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              const savedData =
+              const savedContacts =
                 await AsyncStorage.getItem("contacts");
 
-              const contacts = savedData
-                ? JSON.parse(savedData)
+              const contacts: Contact[] = savedContacts
+                ? JSON.parse(savedContacts)
                 : [];
 
               const updatedContacts = contacts.filter(
-                (contact: any) =>
-                  contact.id !== String(id)
+                (contact) => contact.id !== id
               );
 
               await AsyncStorage.setItem(
@@ -109,9 +110,10 @@ export default function ContactDetail() {
                 ]
               );
             } catch (error) {
+              console.log("Gagal menghapus kontak:", error);
               Alert.alert(
-                "Gagal",
-                "Kontak tidak dapat dihapus."
+                "Error",
+                "Kontak gagal dihapus."
               );
             }
           },
@@ -120,118 +122,100 @@ export default function ContactDetail() {
     );
   };
 
+  if (isEditing) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Edit Kontak</Text>
+
+        <TextInput
+          style={styles.input}
+          value={editName}
+          onChangeText={setEditName}
+          placeholder="Nama"
+        />
+
+        <TextInput
+          style={styles.input}
+          value={editPhone}
+          onChangeText={setEditPhone}
+          placeholder="Nomor Telepon"
+          keyboardType="phone-pad"
+        />
+
+        <TextInput
+          style={styles.input}
+          value={editAddress}
+          onChangeText={setEditAddress}
+          placeholder="Alamat"
+        />
+
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={handleSaveEdit}
+        >
+          <Text style={styles.buttonText}>
+            Simpan Perubahan
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => setIsEditing(false)}
+        >
+          <Text style={styles.cancelText}>
+            Batal
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Detail Kontak</Text>
-
-      <View style={styles.card}>
-        {!editMode ? (
-          <>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {String(name || "?").charAt(0)}
-              </Text>
-            </View>
-
-            <Text style={styles.name}>
-              {String(name || "-")}
-            </Text>
-
-            <Text style={styles.label}>
-              Nomor Telepon
-            </Text>
-
-            <Text style={styles.value}>
-              {String(phone || "-")}
-            </Text>
-
-            <Text style={styles.label}>
-              Alamat
-            </Text>
-
-            <Text style={styles.value}>
-              {String(address || "-")}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>Nama</Text>
-
-            <TextInput
-              style={styles.input}
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Masukkan nama"
-            />
-
-            <Text style={styles.label}>
-              Nomor Telepon
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              value={editPhone}
-              onChangeText={setEditPhone}
-              placeholder="Masukkan nomor telepon"
-              keyboardType="phone-pad"
-            />
-
-            <Text style={styles.label}>
-              Alamat
-            </Text>
-
-            <TextInput
-              style={[styles.input, styles.addressInput]}
-              value={editAddress}
-              onChangeText={setEditAddress}
-              placeholder="Masukkan alamat"
-              multiline
-            />
-          </>
-        )}
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>
+          {name?.charAt(0).toUpperCase()}
+        </Text>
       </View>
 
-      {!editMode ? (
-        <>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setEditMode(true)}
-          >
-            <Text style={styles.buttonText}>
-              Edit Kontak
-            </Text>
-          </TouchableOpacity>
+      <Text style={styles.name}>{name}</Text>
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDelete}
-          >
-            <Text style={styles.buttonText}>
-              Hapus Kontak
-            </Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleSaveEdit}
-          >
-            <Text style={styles.buttonText}>
-              Simpan Perubahan
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.infoBox}>
+        <Text style={styles.label}>Nomor Telepon</Text>
+        <Text style={styles.value}>{phone}</Text>
+      </View>
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setEditMode(false)}
-          >
-            <Text style={styles.cancelButtonText}>
-              Batal
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
+      <View style={styles.infoBox}>
+        <Text style={styles.label}>Alamat</Text>
+        <Text style={styles.value}>{address}</Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => setIsEditing(true)}
+      >
+        <Text style={styles.buttonText}>
+          Edit Kontak
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={handleDelete}
+      >
+        <Text style={styles.buttonText}>
+          Hapus Kontak
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.replace("/")}
+      >
+        <Text style={styles.backText}>
+          Kembali
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -239,109 +223,117 @@ export default function ContactDetail() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F7FC",
-    paddingTop: 55,
-    paddingHorizontal: 20,
+    padding: 24,
+    backgroundColor: "#fff",
   },
 
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#333333",
-    marginBottom: 25,
-  },
-
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
+    marginBottom: 24,
   },
 
   avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#E5E3FF",
-    alignItems: "center",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#E8DEF8",
     justifyContent: "center",
-    marginBottom: 15,
+    alignItems: "center",
     alignSelf: "center",
+    marginBottom: 16,
   },
 
   avatarText: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "bold",
-    color: "#6C63FF",
+    color: "#5B3A8E",
   },
 
   name: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#333333",
-    marginBottom: 25,
     textAlign: "center",
+    marginBottom: 24,
+  },
+
+  infoBox: {
+    backgroundColor: "#F7F7F7",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
   },
 
   label: {
     fontSize: 13,
-    color: "#888888",
-    marginTop: 10,
-    marginBottom: 5,
+    color: "#777",
+    marginBottom: 4,
   },
 
   value: {
     fontSize: 16,
-    color: "#333333",
+    color: "#222",
   },
 
   input: {
-    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    fontSize: 15,
-    marginBottom: 10,
-  },
-
-  addressInput: {
-    height: 90,
-    textAlignVertical: "top",
+    borderColor: "#DDD",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+    fontSize: 16,
   },
 
   editButton: {
-    backgroundColor: "#6C63FF",
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: "#6C5CE7",
+    padding: 15,
+    borderRadius: 10,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 10,
+  },
+
+  saveButton: {
+    backgroundColor: "#6C5CE7",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
   },
 
   deleteButton: {
-    backgroundColor: "#E05252",
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: "#E74C3C",
+    padding: 15,
+    borderRadius: 10,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 10,
   },
 
   cancelButton: {
-    backgroundColor: "#E5E5E5",
-    paddingVertical: 14,
-    borderRadius: 12,
+    padding: 15,
+    borderRadius: 10,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 10,
+  },
+
+  backButton: {
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 10,
   },
 
   buttonText: {
-    color: "#FFFFFF",
+    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },
 
-  cancelButtonText: {
-    color: "#555555",
+  cancelText: {
+    color: "#555",
+    fontSize: 16,
+  },
+
+  backText: {
+    color: "#6C5CE7",
     fontSize: 16,
     fontWeight: "bold",
   },
