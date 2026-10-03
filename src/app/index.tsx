@@ -1,12 +1,15 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   FlatList,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
+  View,
 } from "react-native";
 
-const contacts = [
+const defaultContacts = [
   {
     id: "1",
     name: "Ike",
@@ -40,19 +43,57 @@ const contacts = [
 ];
 
 export default function Index() {
+  const [contacts, setContacts] = useState(defaultContacts);
+
+  const loadContacts = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem("contacts");
+
+      if (savedData) {
+        setContacts(JSON.parse(savedData));
+      } else {
+        await AsyncStorage.setItem(
+          "contacts",
+          JSON.stringify(defaultContacts)
+        );
+
+        setContacts(defaultContacts);
+      }
+    } catch (error) {
+      console.log("Gagal membaca kontak:", error);
+      setContacts(defaultContacts);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadContacts();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>BukuKontak</Text>
-          <Text style={styles.subtitle}>Daftar kontak kamu</Text>
+
+          <Text style={styles.subtitle}>
+            Daftar kontak kamu
+          </Text>
         </View>
 
-        <Text style={styles.count}>{contacts.length} Kontak</Text>
+        <Text style={styles.count}>
+          {contacts.length} Kontak
+        </Text>
       </View>
 
-      <TouchableOpacity style={styles.addButton}>
-        <Text style={styles.addButtonText}>+ Tambah Kontak</Text>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => router.push("/add-contact")}
+      >
+        <Text style={styles.addButtonText}>
+          + Tambah Kontak
+        </Text>
       </TouchableOpacity>
 
       <FlatList
@@ -60,7 +101,20 @@ export default function Index() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() =>
+              router.push({
+                pathname: "/contact-detail",
+                params: {
+                  id: item.id,
+                  name: item.name,
+                  phone: item.phone,
+                  address: item.address,
+                },
+              })
+            }
+          >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {item.name.charAt(0)}
@@ -68,11 +122,19 @@ export default function Index() {
             </View>
 
             <View style={styles.contactInfo}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.phone}>{item.phone}</Text>
-              <Text style={styles.address}>{item.address}</Text>
+              <Text style={styles.name}>
+                {item.name}
+              </Text>
+
+              <Text style={styles.phone}>
+                {item.phone}
+              </Text>
+
+              <Text style={styles.address}>
+                {item.address}
+              </Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
