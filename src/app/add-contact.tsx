@@ -103,7 +103,7 @@ export default function AddContact() {
       <Text style={styles.title}>Tambah Kontak</Text>
 
       <Text style={styles.subtitle}>
-        Tambahkan kontak baru ke BukuKontak
+        Tambahkan kontak baru ke Konekta
       </Text>
 
       <Text style={styles.label}>Nama</Text>

@@ -75,7 +75,7 @@ export default function Index() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>BukuKontak</Text>
+          <Text style={styles.title}>Konekta</Text>
 
           <Text style={styles.subtitle}>
             Daftar kontak kamu
